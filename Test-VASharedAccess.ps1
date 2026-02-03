@@ -15,12 +15,22 @@
   - Cleans up mappings after each test.
 #>
 
+
 param(
   [string]$AccountsFile = "$PSScriptRoot\accounts.txt",
   [string]$SharesFile   = "$PSScriptRoot\shares.txt",
   [switch]$ExportCsv,
-  [string]$CsvPath      = "$PSScriptRoot\ShareAccessResults.csv"
+  [string]$CsvPath      = "$PSScriptRoot\ShareAccessResults.csv",
+
+  # Timeout for each net use call (seconds)
+  [int]$NetUseTimeoutSec = 20
 )
+
+function Write-Status {
+  param([string]$Message)
+  $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+  Write-Host "[$ts] $Message"
+}
 
 function Get-FreeDriveLetter {
   $used = (Get-PSDrive -PSProvider FileSystem).Name
@@ -32,17 +42,60 @@ function Get-FreeDriveLetter {
 
 function Get-RootShareFromUnc {
   param([Parameter(Mandatory)][string]$UncPath)
-
   if ($UncPath -notmatch '^[\\]{2}[^\\]+\\[^\\]+') { return $null }
   $parts = ($UncPath -split '\\' | Where-Object { $_ -ne '' })
   if ($parts.Count -lt 2) { return $null }
-  return "\\$($parts[0])\$($parts[1])"
+  "\\$($parts[0])\$($parts[1])"
+}
+
+function Invoke-CommandWithTimeout {
+  <#
+    Runs a command line via cmd.exe, captures stdout/stderr, and kills it if it exceeds timeout.
+  #>
+  param(
+    [Parameter(Mandatory)][string]$CmdLine,
+    [Parameter(Mandatory)][int]$TimeoutSec
+  )
+
+  $psi = New-Object System.Diagnostics.ProcessStartInfo
+  $psi.FileName = "cmd.exe"
+  $psi.Arguments = "/c $CmdLine"
+  $psi.RedirectStandardOutput = $true
+  $psi.RedirectStandardError  = $true
+  $psi.UseShellExecute = $false
+  $psi.CreateNoWindow = $true
+
+  $p = New-Object System.Diagnostics.Process
+  $p.StartInfo = $psi
+
+  [void]$p.Start()
+
+  if (-not $p.WaitForExit($TimeoutSec * 1000)) {
+    try { $p.Kill() } catch {}
+    return [pscustomobject]@{
+      TimedOut = $true
+      ExitCode = $null
+      StdOut   = ""
+      StdErr   = "Timed out after $TimeoutSec seconds."
+    }
+  }
+
+  $out = $p.StandardOutput.ReadToEnd()
+  $err = $p.StandardError.ReadToEnd()
+
+  [pscustomobject]@{
+    TimedOut = $false
+    ExitCode = $p.ExitCode
+    StdOut   = $out.Trim()
+    StdErr   = $err.Trim()
+  }
 }
 
 function Test-ShareAccess {
   param(
     [Parameter(Mandatory)][string]$UncPath,
-    [Parameter(Mandatory)][pscredential]$Credential
+    [Parameter(Mandatory)][pscredential]$Credential,
+    [Parameter(Mandatory)][int]$TimeoutSec
   )
 
   $user = $Credential.UserName
@@ -67,17 +120,20 @@ function Test-ShareAccess {
   $errMsg = $null
 
   try {
-    # Remove any stale mapping just in case
-    cmd /c "net use $drivePath /delete /y" | Out-Null
+    # Best effort cleanup
+    Invoke-CommandWithTimeout -CmdLine "net use $drivePath /delete /y" -TimeoutSec 5 | Out-Null
 
-    # Map root share using provided credentials
-    $mapOut  = cmd /c "net use $drivePath `"$rootShare`" /user:`"$user`" `"$pass`""
-    $mapExit = $LASTEXITCODE
+    # Map root share
+    $mapCmd = "net use $drivePath `"$rootShare`" /user:`"$user`" `"$pass`""
+    $mapRes = Invoke-CommandWithTimeout -CmdLine $mapCmd -TimeoutSec $TimeoutSec
 
-    if ($mapExit -eq 0) {
+    if ($mapRes.TimedOut) {
+      $errMsg = $mapRes.StdErr
+    }
+    elseif ($mapRes.ExitCode -eq 0) {
       $mapped = $true
 
-      # Convert requested UNC to mapped path, preserving subfolder
+      # Convert requested UNC path into mapped path (subfolders included)
       $relative = $UncPath.Substring($rootShare.Length) # "" or "\sub\path"
       $testPath = Join-Path $drivePath ($relative.TrimStart('\'))
 
@@ -91,16 +147,13 @@ function Test-ShareAccess {
       }
     }
     else {
-      $mapped = $false
-      $errMsg = ($mapOut | Out-String).Trim()
-      if (-not $errMsg) { $errMsg = "net use failed with exit code $mapExit" }
+      # net use failed
+      $errMsg = ($mapRes.StdOut, $mapRes.StdErr | Where-Object { $_ }) -join " | "
+      if (-not $errMsg) { $errMsg = "net use failed with exit code $($mapRes.ExitCode)" }
     }
   }
-  catch {
-    $errMsg = $_.Exception.Message
-  }
   finally {
-    cmd /c "net use $drivePath /delete /y" | Out-Null
+    Invoke-CommandWithTimeout -CmdLine "net use $drivePath /delete /y" -TimeoutSec 5 | Out-Null
   }
 
   [pscustomobject]@{
@@ -113,41 +166,46 @@ function Test-ShareAccess {
   }
 }
 
-# --- Validate input files ---
+# --- Load lists ---
 if (-not (Test-Path -LiteralPath $AccountsFile)) { throw "Accounts file not found: $AccountsFile" }
 if (-not (Test-Path -LiteralPath $SharesFile))   { throw "Shares file not found:   $SharesFile" }
 
-$accounts = Get-Content -LiteralPath $AccountsFile |
-  ForEach-Object { $_.Trim() } |
-  Where-Object { $_ -and $_ -notmatch '^\s*#' } |
-  Select-Object -Unique
+$accounts = Get-Content -LiteralPath $AccountsFile | ForEach-Object { $_.Trim() } | Where-Object { $_ -and $_ -notmatch '^\s*#' } | Select-Object -Unique
+$shares   = Get-Content -LiteralPath $SharesFile   | ForEach-Object { $_.Trim() } | Where-Object { $_ -and $_ -notmatch '^\s*#' } | Select-Object -Unique
 
-$shares = Get-Content -LiteralPath $SharesFile |
-  ForEach-Object { $_.Trim() } |
-  Where-Object { $_ -and $_ -notmatch '^\s*#' } |
-  Select-Object -Unique
+# --- Prompt creds ---
+Write-Status "Collecting credentials for $($accounts.Count) accounts..."
+$creds = foreach ($acct in $accounts) { Get-Credential -UserName $acct -Message "Enter password for $acct" }
 
-if ($accounts.Count -lt 1) { throw "No accounts found in $AccountsFile" }
-if ($shares.Count -lt 1)   { throw "No shares found in $SharesFile" }
+# --- Run tests with progress ---
+$total = $creds.Count * $shares.Count
+$done  = 0
+$results = New-Object System.Collections.Generic.List[object]
 
-# --- Collect credentials (password prompt per account) ---
-$creds = foreach ($acct in $accounts) {
-  Get-Credential -UserName $acct -Message "Enter password for $acct"
-}
+for ($ci = 0; $ci -lt $creds.Count; $ci++) {
+  $cred = $creds[$ci]
+  for ($si = 0; $si -lt $shares.Count; $si++) {
+    $share = $shares[$si]
+    $done++
 
-# --- Run tests ---
-$results = foreach ($cred in $creds) {
-  foreach ($share in $shares) {
-    Test-ShareAccess -UncPath $share -Credential $cred
+    $pct = [math]::Round(($done / $total) * 100, 0)
+    $activity = "Testing share access ($done of $total)"
+    $status   = "Account: $($cred.UserName) | Path: $share"
+    $current  = "Mapping and listing (timeout: ${NetUseTimeoutSec}s)"
+
+    Write-Progress -Activity $activity -Status $status -CurrentOperation $current -PercentComplete $pct
+    Write-Status "Testing: $($cred.UserName) => $share"
+
+    $results.Add((Test-ShareAccess -UncPath $share -Credential $cred -TimeoutSec $NetUseTimeoutSec))
   }
 }
 
+Write-Progress -Activity "Testing share access" -Completed
+
 # --- Output ---
-$results |
-  Sort-Object User, SharePath |
-  Format-Table User, SharePath, CanMap, CanList, Error -AutoSize
+$results | Sort-Object User, SharePath | Format-Table User, SharePath, CanMap, CanList, Error -AutoSize
 
 if ($ExportCsv) {
   $results | Export-Csv -NoTypeInformation -Path $CsvPath
-  Write-Host "Exported results to: $CsvPath" -ForegroundColor Green
+  Write-Status "Exported results to: $CsvPath"
 }
