@@ -1,54 +1,43 @@
-# VA Share Access Validation (PowerShell)
+# VA Share Access Test (PowerShell)
 
-This repository contains a PowerShell utility designed to **validate shared folder access** for multiple VA service or user accounts across one or more UNC paths.
+This guide explains how to run the **Test-VAShareAccess.ps1** script to validate:
 
-It is primarily intended for scenarios where:
-- A **new account** has been added to security groups
-- Access is expected but needs to be **verified**
-- Multiple service accounts must be checked consistently
-- Documentation or evidence of access is required (CSV output)
-
----
-
-## 🔍 What This Script Does
-
-For each account and each shared folder, the script:
-
-1. Authenticates using the supplied credentials
-2. Maps the **root share** using `net use`
-3. Attempts to **list directory contents**
-4. Records whether the account:
-   - Successfully authenticated to the share
-   - Can read/list the requested path
-5. Cleans up all temporary drive mappings
-
-The result is a clear matrix of **Account × Share × Access Status**.
+- ✔ Account access to shared folders  
+- ✔ Folder-level permissions (reach/list)  
+- ✔ Optional write access (create/delete test file)  
+- ✔ Export results for documentation (CSV)
 
 ---
 
-## 📁 Repository Structure
-├── Test-VAShareAccess.ps1
-├── accounts.txt
-├── shares.txt
-└── README.md
+## 📁 Requirements
+
+Place the following files in the **same folder**:
+
+Test-VAShareAccess.ps1
+accounts.txt
+shares.txt
 
 
 ---
 
-## 📄 Input Files
+## 👤 Configure Accounts (`accounts.txt`)
 
-### `accounts.txt`
-List one account per line.
+Add one account per line using VA domain format:
 
-Example:
+VA\OITXXXIA
+VA\OITXXXIU
+VA\OITXXXIU2
 
 
+> ⚠️ Use the exact account names assigned by your site or team.
 
 ---
 
-### `shares.txt`
-List one UNC path per line.  
-Paths may be either a share root or a subfolder.
+## 📂 Configure Shares (`shares.txt`)
 
-Example:
-\\server2\shareB\SubFolder \\server3\shareC ``` Blank lines and lines starting with `#` are ignored. --- ## ▶️ How to Run Open PowerShell and navigate to the script directory: ```powershell cd path\to\repo ``` Run the script: ```powershell .\Test-VAShareAccess.ps1 ``` You will be prompted **once per account** to enter the password securely. --- ## 📤 Export Results to CSV To export the results for documentation or ticket attachments: ```powershell .\Test-VAShareAccess.ps1 -ExportCsv ``` The CSV will be created as: ``` ShareAccessResults.csv ``` --- ## 📊 Output Fields | Field | Description | |-----------|-------------| | User | Account being tested | | SharePath| UNC path requested | | RootShare| Root share mapped | | CanMap | Account authenticated to the share | | CanList | Account can list/read the folder | | Error | Failure reason (if any) | > **Note:** `CanMap = True` but `CanList = False` usually indicates the account can authenticate but lacks read/list permissions. --- ## ⚠️ Notes & Limitations - Uses `net use`, which may behave differently in environments enforcing strict Kerberos-only authentication - Read/list access is tested by directory enumeration - Script does **not** modify data on the share - Temporary drive mappings are always cleaned up --- ## 🔐 Security Considerations - Passwords are never stored - Credentials are collected using `Get-Credential` - Plaintext passwords are used **only in-memory** for `net use` - No logging of sensitive data --- ## 🛠️ Common Use Cases - Validate new service account access - Confirm group membership propagation - Troubleshoot "access denied" issues - Provide evidence for access requests or incidents --- ## 🚀 Possible Enhancements - Write / Modify permission testing (create + delete temp file) - Kerberos-only authentication mode - Parallel execution for large share lists - HTML or Excel reporting --- ## 📌 Disclaimer This script is provided as-is for administrative validation purposes. Always ensure you have proper authorization before testing credentials or accessing network resources. --- ## 📬 Questions or Improvements Feel free to open an issue or submit a pull request if you have enhancements or fixes.
+Add one UNC path per line.
+
+⚠️ These must reflect your **site’s SMB shared paths**.
+
+### Example:
+\\server01\DICOM\Scratch \\server02\Imaging\Imports ``` ### Notes: - ✔ Use real server/share paths from your environment - ✔ Subfolders are supported - ❌ Do NOT use local paths (e.g., `C:\`) --- ## 💻 Open PowerShell 1. Click **Start** 2. Search for **PowerShell** 3. Open it (no admin required) --- ## 📁 Navigate to Script Folder ```powershell cd "C:\Path\To\Your\Script" ``` ### Example: ```powershell cd "C:\Temp\ShareAccessTest" ``` --- ## ▶️ Run the Script (Safe Mode – No Changes) ```powershell .\Test-VAShareAccess.ps1 ``` ### What this does: - Prompts for each account password - Tests access to each share - Does **NOT modify anything** --- ## ✍️ Run with Write Test (Optional) ```powershell .\Test-VAShareAccess.ps1 -EnableWriteTest ``` ### What this adds: - Creates a temporary file - Deletes it immediately - Confirms write/modify access > ⚠️ Only use if permitted to create/delete files in those folders. --- ## 📊 Export Results to CSV ```powershell .\Test-VAShareAccess.ps1 -EnableWriteTest -ExportCsv ``` ### Output: ``` .\ShareAccessResults.csv ``` --- ## 🔍 Understanding Results | Field | Description | |------|-------------| | CanMap | Account authenticated to share | | CanReach | Folder path is accessible | | CanList | Can browse contents | | CanWrite | Can create files | | CanDelete | Can delete files | | PermissionSummary | Final access level | --- ### ✅ Example Interpretations | Result | Meaning | |--------|--------| | Modify (Write/Delete) | Full access | | Write Only | Can create but not delete | | Read/List Access | Read-only access | | Traverse Only | Limited (no listing) | | No Access | Blocked (auth/share/ACL issue) | --- ## ⚠️ Common Issues ### Error 1219 ``` Multiple connections to a server using different credentials ``` #### Fix: ```cmd net use * /delete ``` Then rerun the script. --- ### Access Denied - Account not added to NTFS permissions - Share permissions missing - Incorrect folder path --- ### System Error 53 ``` The network path was not found ``` - Server unreachable - DNS issue - Invalid UNC path --- ## 🧠 Best Practices - Run in a **clean session** (clear `net use` if needed) - Ensure accounts are added to: - ✔ NTFS Security tab - ✔ Share permissions (if restricted) - Use CSV export for ticketing and documentation --- ## 🚀 Recommended Command ```powershell .\Test-VAShareAccess.ps1 -EnableWriteTest -ExportCsv ``` --- ## 📌 Summary 1. Add accounts to `accounts.txt` 2. Add site SMB paths to `shares.txt` 3. Run script in PowerShell 4. Review output or export CSV
