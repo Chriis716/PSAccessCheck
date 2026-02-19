@@ -57,13 +57,29 @@ Add one UNC path per line.
   
 --- 
 
-## 📁 Navigate to Script Folder ```powershell cd "C:\Path\To\Your\Script" ``` 
+## 📁 Navigate to Script Folder 
+```powershell 
+cd "C:\Path\To\Your\Script"
+``` 
 
-### Example: ```powershell cd "C:\Temp\ShareAccessTest" ``` 
+### Example: 
+```powershell 
+cd "C:\Temp\ShareAccessTest"
+``` 
 
 --- 
 
-## ▶️ Run the Script (Safe Mode – No Changes) ```powershell .\Test-VAShareAccess.ps1 ``` ### What this does: - Prompts for each account password - Tests access to each share - Does **NOT modify anything** --- ## ✍️ Run with Write Test (Optional) 
+## ▶️ Run the Script (Safe Mode – No Changes) 
+```powershell 
+.\Test-VAShareAccess.ps1
+```
+### What this does: 
+- Prompts for each account password
+- Tests access to each share
+- Does **NOT modify anything**
+
+--- 
+## ✍️ Run with Write Test (Optional) 
 
 ```powershell 
 .\Test-VAShareAccess.ps1 -EnableWriteTest
