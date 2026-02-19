@@ -100,7 +100,21 @@ cd "C:\Temp\ShareAccessTest"
 .\ShareAccessResults.csv
 ```
 --- 
-## 🔍 Understanding Results | Field | Description | |------|-------------| | CanMap | Account authenticated to share | | CanReach | Folder path is accessible | | CanList | Can browse contents | | CanWrite | Can create files | | CanDelete | Can delete files | | PermissionSummary | Final access level | 
+## 🔍 Understanding Results 
+| Field 
+| Description | 
+|------|-------------| 
+| CanMap 
+| Account authenticated to share | 
+| CanReach 
+| Folder path is accessible | 
+| CanList 
+| Can browse contents | 
+| CanWrite 
+| Can create files | 
+| CanDelete 
+| Can delete files | 
+| PermissionSummary | Final access level | 
 
 --- 
 
