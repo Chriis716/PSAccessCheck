@@ -101,35 +101,53 @@ cd "C:\Temp\ShareAccessTest"
 ```
 --- 
 ## 🔍 Understanding Results 
-| Field | 
-Description | 
+| Field | Description | 
 |------|-------------| 
-| CanMap 
-| Account authenticated to share | 
-| CanReach 
-| Folder path is accessible | 
-| CanList 
-| Can browse contents | 
-| CanWrite 
-| Can create files | 
-| CanDelete 
-| Can delete files | 
+| CanMap | Account authenticated to share | 
+| CanReach | Folder path is accessible | 
+| CanList | Can browse contents | 
+| CanWrite | Can create files | 
+| CanDelete | Can delete files | 
 | PermissionSummary | Final access level | 
 
 --- 
 
-### ✅ Example Interpretations | Result | Meaning | |--------|--------| | Modify (Write/Delete) | Full access | | Write Only | Can create but not delete | | Read/List Access | Read-only access | | Traverse Only | Limited (no listing) | | No Access | Blocked (auth/share/ACL issue) | 
+### ✅ Example Interpretations 
+| Result | Meaning | 
+|--------|--------| 
+| Modify (Write/Delete) | Full access | 
+| Write Only | Can create but not delete | 
+| Read/List Access | Read-only access | 
+| Traverse Only | Limited (no listing) | 
+| No Access | Blocked (auth/share/ACL issue) | 
 
 --- 
 
-## ⚠️ Common Issues ### Error 1219 ``` Multiple connections to a server using different credentials ``` #### Fix: ```cmd net use * /delete ``` Then rerun the script. --- ### Access Denied - Account not added to NTFS permissions - Share permissions missing - Incorrect folder path 
+## ⚠️ Common Issues 
+### Error 1219 
+``` 
+Multiple connections to a server using different credentials
+```
+#### Fix: 
+```cmd 
+net use * /delete
+```
+Then rerun the script. 
+--- 
+### Access Denied 
+- Account not added to NTFS permissions
+- Share permissions missing
+- Incorrect folder path 
 
 --- 
 
 ### System Error 53 
 ``` 
 The network path was not found 
-``` - Server unreachable - DNS issue - Invalid UNC path
+```
+- Server unreachable
+- DNS issue
+- Invalid UNC path
 
 ---
 ## 🧠 Best Practices
@@ -142,7 +160,8 @@ The network path was not found
 ---
 ## 🚀 Recommended Command
 ```powershell
-.\Test-VAShareAccess.ps1 -EnableWriteTest -ExportCsv ```
+.\Test-VAShareAccess.ps1 -EnableWriteTest -ExportCsv
+```
 --- 
 
 ## 📌 Summary
