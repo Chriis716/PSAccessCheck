@@ -9,7 +9,6 @@
     2) Tests the EXACT target path you provided (including subfolders) for:
          - CanReach   (traverse / access folder object; no enumeration)
          - CanList    (enumerate contents)
-         - CanReadFile (read 1 line from 1 file if one is found/accessible; optional)
          - CanReadAcl (read folder ACL metadata; optional, often blocked)
     3) Cleans up the mapping
   Includes per-test timeout to avoid hanging and a progress bar + status lines.
@@ -28,10 +27,6 @@ param(
 
   # Timeout for each "net use" mapping attempt (seconds)
   [int]$NetUseTimeoutSec = 20,
-
-  # Read test settings (non-destructive)
-  [switch]$EnableReadFileTest,   # off by default
-  [switch]$ReadFileRecurse,      # off by default
 
   # Write test settings (creates + deletes a temp file)
   [switch]$EnableWriteTest,      # off by default (opt-in)
@@ -114,7 +109,7 @@ function Test-ShareAccess {
   if (-not $rootShare) {
     return [pscustomobject]@{
       User=$user; SharePath=$UncPath; RootShare=$null
-      CanMap=$false; CanReach=$false; CanList=$false; CanReadFile=$false; CanReadAcl=$false
+      CanMap=$false; CanReach=$false; CanList=$false; CanReadAcl=$false
       CanWrite=$false; CanDelete=$false; PermissionSummary="Invalid UNC path"
       AclHint=$null; Error="Invalid UNC path."
     }
@@ -127,7 +122,6 @@ function Test-ShareAccess {
 
   $canReach    = $false
   $canList     = $false
-  $canReadFile = $false
   $canReadAcl  = $false
   $aclHint     = $null
 
@@ -168,26 +162,7 @@ function Test-ShareAccess {
         } catch {
           if (-not $errMsg) { $errMsg = $_.Exception.Message }
         }
-      }
-
-      # 3) Read file (optional, non-destructive)
-      if ($DoReadFileTest -and $canList) {
-        try {
-          $oneFile =
-            if ($DoReadFileRecurse) {
-              Get-ChildItem -LiteralPath $testPath -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-            } else {
-              Get-ChildItem -LiteralPath $testPath -File -ErrorAction SilentlyContinue | Select-Object -First 1
-            }
-
-          if ($oneFile) {
-            $null = Get-Content -LiteralPath $oneFile.FullName -TotalCount 1 -ErrorAction Stop
-            $canReadFile = $true
-          }
-        } catch {
-          # optional
-        }
-      }
+      }    
 
       # 4) ACL read (optional, non-destructive)
       if ($canReach) {
@@ -230,7 +205,6 @@ function Test-ShareAccess {
         if (-not $canReach) { "No Access (ACL/Path)" }
         elseif ($DoWriteTest -and $canWrite -and $canDelete) { "Modify Confirmed (Write/Delete)" }
         elseif ($DoWriteTest -and $canWrite -and -not $canDelete) { "Write Confirmed (Delete denied)" }
-        elseif ($canList -and $canReadFile) { "Read Confirmed" }
         elseif ($canList) { "List Only" }
         else { "Traverse Only" }
     }
@@ -251,7 +225,6 @@ function Test-ShareAccess {
     CanMap            = $mapped
     CanReach          = $canReach
     CanList           = $canList
-    CanReadFile       = $canReadFile
     CanReadAcl        = $canReadAcl
     CanWrite          = $canWrite
     CanDelete         = $canDelete
@@ -312,7 +285,7 @@ Write-Status "Completed all tests."
 
 # --- Output ---
 $results | Sort-Object User, SharePath |
-  Format-Table User, SharePath, CanMap, CanReach, CanList, CanReadFile, CanWrite, CanDelete, PermissionSummary, Error -AutoSize
+  Format-Table User, SharePath, CanMap, CanReach, CanList, CanWrite, CanDelete, PermissionSummary, Error -AutoSize
 
 if ($ExportCsv) {
   $results | Export-Csv -NoTypeInformation -Path $CsvPath
