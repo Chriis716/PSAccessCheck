@@ -13,6 +13,15 @@
     3) Cleans up the mapping
   Includes per-test timeout to avoid hanging and a progress bar + status lines.
 
+.AUTHOR
+	Christopher Sivilaylack
+
+.CREATED
+	2026-02-19
+	
+.VERSION
+	1.0
+
 .INPUTS
   accounts.txt (one account per line, e.g. VA\OITXXXIA)
   shares.txt   (one UNC path per line, e.g. \\server\share\folder)
