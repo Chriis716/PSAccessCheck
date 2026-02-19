@@ -101,7 +101,8 @@ cd "C:\Temp\ShareAccessTest"
 ```
 --- 
 ## 🔍 Understanding Results 
-| Field | Description | 
+| Field | 
+Description | 
 |------|-------------| 
 | CanMap 
 | Account authenticated to share | 
