@@ -30,8 +30,12 @@ param(
   [int]$NetUseTimeoutSec = 20,
 
   # Read test settings (non-destructive)
-  [switch]$EnableReadFileTest,   # off by default; use -EnableReadFileTest to turn on
-  [switch]$ReadFileRecurse,      # off by default; use -ReadFileRecurse to allow deep scan for a file
+  [switch]$EnableReadFileTest,   # off by default
+  [switch]$ReadFileRecurse,      # off by default
+
+  # Write test settings (creates + deletes a temp file)
+  [switch]$EnableWriteTest,      # off by default (opt-in)
+  [string]$WriteTestFileNamePrefix = "perm_test",
 
   # CSV export
   [switch]$ExportCsv,
@@ -62,9 +66,6 @@ function Get-RootShareFromUnc {
 }
 
 function Invoke-CommandWithTimeout {
-  <#
-    Runs a command line via cmd.exe, captures stdout/stderr, and kills it if it exceeds timeout.
-  #>
   param(
     [Parameter(Mandatory)][string]$CmdLine,
     [Parameter(Mandatory)][int]$TimeoutSec
@@ -80,27 +81,18 @@ function Invoke-CommandWithTimeout {
 
   $p = New-Object System.Diagnostics.Process
   $p.StartInfo = $psi
-
   [void]$p.Start()
 
   if (-not $p.WaitForExit($TimeoutSec * 1000)) {
     try { $p.Kill() } catch {}
-    return [pscustomobject]@{
-      TimedOut = $true
-      ExitCode = $null
-      StdOut   = ""
-      StdErr   = "Timed out after $TimeoutSec seconds."
-    }
+    return [pscustomobject]@{ TimedOut=$true; ExitCode=$null; StdOut=""; StdErr="Timed out after $TimeoutSec seconds." }
   }
-
-  $out = $p.StandardOutput.ReadToEnd()
-  $err = $p.StandardError.ReadToEnd()
 
   [pscustomobject]@{
     TimedOut = $false
     ExitCode = $p.ExitCode
-    StdOut   = $out.Trim()
-    StdErr   = $err.Trim()
+    StdOut   = $p.StandardOutput.ReadToEnd().Trim()
+    StdErr   = $p.StandardError.ReadToEnd().Trim()
   }
 }
 
@@ -110,7 +102,9 @@ function Test-ShareAccess {
     [Parameter(Mandatory)][pscredential]$Credential,
     [Parameter(Mandatory)][int]$TimeoutSec,
     [Parameter(Mandatory)][bool]$DoReadFileTest,
-    [Parameter(Mandatory)][bool]$DoReadFileRecurse
+    [Parameter(Mandatory)][bool]$DoReadFileRecurse,
+    [Parameter(Mandatory)][bool]$DoWriteTest,
+    [Parameter(Mandatory)][string]$WritePrefix
   )
 
   $user = $Credential.UserName
@@ -119,17 +113,10 @@ function Test-ShareAccess {
   $rootShare = Get-RootShareFromUnc -UncPath $UncPath
   if (-not $rootShare) {
     return [pscustomobject]@{
-      User             = $user
-      SharePath        = $UncPath
-      RootShare        = $null
-      CanMap           = $false
-      CanReach         = $false
-      CanList          = $false
-      CanReadFile      = $false
-      CanReadAcl       = $false
-      PermissionSummary= "Invalid UNC path"
-      AclHint          = $null
-      Error            = "Invalid UNC path."
+      User=$user; SharePath=$UncPath; RootShare=$null
+      CanMap=$false; CanReach=$false; CanList=$false; CanReadFile=$false; CanReadAcl=$false
+      CanWrite=$false; CanDelete=$false; PermissionSummary="Invalid UNC path"
+      AclHint=$null; Error="Invalid UNC path."
     }
   }
 
@@ -138,19 +125,20 @@ function Test-ShareAccess {
   $mapped    = $false
   $errMsg    = $null
 
-  # Non-destructive "permission type" signals
   $canReach    = $false
   $canList     = $false
   $canReadFile = $false
   $canReadAcl  = $false
   $aclHint     = $null
+
+  $canWrite  = $false
+  $canDelete = $false
+
   $permSummary = "Unknown"
 
   try {
-    # Best-effort cleanup
     Invoke-CommandWithTimeout -CmdLine "net use $drivePath /delete /y" -TimeoutSec 5 | Out-Null
 
-    # Map ROOT share (required for SMB auth), then test exact target path
     $mapCmd = "net use $drivePath `"$rootShare`" /user:`"$user`" `"$pass`""
     $mapRes = Invoke-CommandWithTimeout -CmdLine $mapCmd -TimeoutSec $TimeoutSec
 
@@ -161,88 +149,98 @@ function Test-ShareAccess {
     elseif ($mapRes.ExitCode -eq 0) {
       $mapped = $true
 
-      # Translate requested UNC into mapped path, preserving subfolder path
-      $relative = $UncPath.Substring($rootShare.Length) # "" or "\sub\path"
+      $relative = $UncPath.Substring($rootShare.Length)
       $testPath = Join-Path $drivePath ($relative.TrimStart('\'))
 
-      # 1) Reach test (NO enumeration)
+      # 1) Reach (no enumeration)
       try {
         $null = Get-Item -LiteralPath $testPath -ErrorAction Stop
         $canReach = $true
-      }
-      catch {
-        $canReach = $false
+      } catch {
         $errMsg = $_.Exception.Message
       }
 
-      # 2) List test (enumeration)
+      # 2) List (enumeration)
       if ($canReach) {
         try {
           $null = Get-ChildItem -LiteralPath $testPath -ErrorAction Stop
           $canList = $true
-        }
-        catch {
-          $canList = $false
+        } catch {
           if (-not $errMsg) { $errMsg = $_.Exception.Message }
         }
       }
 
-      # 3) Read file test (non-destructive; optional; only if you enable it)
+      # 3) Read file (optional, non-destructive)
       if ($DoReadFileTest -and $canList) {
         try {
-          if ($DoReadFileRecurse) {
-            $oneFile = Get-ChildItem -LiteralPath $testPath -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-          } else {
-            $oneFile = Get-ChildItem -LiteralPath $testPath -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          }
+          $oneFile =
+            if ($DoReadFileRecurse) {
+              Get-ChildItem -LiteralPath $testPath -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            } else {
+              Get-ChildItem -LiteralPath $testPath -File -ErrorAction SilentlyContinue | Select-Object -First 1
+            }
 
           if ($oneFile) {
             $null = Get-Content -LiteralPath $oneFile.FullName -TotalCount 1 -ErrorAction Stop
             $canReadFile = $true
           }
-        }
-        catch {
-          # Optional test, do not override primary error message
+        } catch {
+          # optional
         }
       }
 
-      # 4) ACL read test (non-destructive; may be denied)
+      # 4) ACL read (optional, non-destructive)
       if ($canReach) {
         try {
           $acl = Get-Acl -LiteralPath $testPath -ErrorAction Stop
           $canReadAcl = $true
-
-          # Keep this short and safe (first few entries only)
           $aclHint = ($acl.Access |
             Select-Object -First 5 |
             ForEach-Object { "$($_.IdentityReference): $($_.FileSystemRights) ($($_.AccessControlType))" }) -join "; "
-        }
-        catch {
+        } catch {
           $canReadAcl = $false
         }
       }
 
-      # Summary label (no write test per your requirement)
+      # 5) Write/Delete test (OPTIONAL, opt-in)
+      if ($DoWriteTest -and $canReach) {
+        $tmpName = "{0}_{1}.tmp" -f $WritePrefix, ([guid]::NewGuid().ToString("N"))
+        $tmpPath = Join-Path $testPath $tmpName
+
+        try {
+          # Create (write)
+          Set-Content -LiteralPath $tmpPath -Value "perm test" -ErrorAction Stop
+          $canWrite = $true
+
+          # Delete (modify)
+          Remove-Item -LiteralPath $tmpPath -Force -ErrorAction Stop
+          $canDelete = $true
+        }
+        catch {
+          # If create succeeded but delete failed, we don't want to leave litter
+          if (Test-Path -LiteralPath $tmpPath) {
+            try { Remove-Item -LiteralPath $tmpPath -Force -ErrorAction SilentlyContinue } catch {}
+          }
+          if (-not $errMsg) { $errMsg = $_.Exception.Message }
+        }
+      }
+
+      # Summary label
       $permSummary =
-        if (-not $canReach) { "No Access" }
-        elseif ($canReach -and -not $canList) { "Traverse Only" }
+        if (-not $canReach) { "No Access (ACL/Path)" }
+        elseif ($DoWriteTest -and $canWrite -and $canDelete) { "Modify Confirmed (Write/Delete)" }
+        elseif ($DoWriteTest -and $canWrite -and -not $canDelete) { "Write Confirmed (Delete denied)" }
         elseif ($canList -and $canReadFile) { "Read Confirmed" }
         elseif ($canList) { "List Only" }
-        else { "Reach Only" }
+        else { "Traverse Only" }
     }
     else {
-      # net use failed
       $errMsg = ($mapRes.StdOut, $mapRes.StdErr | Where-Object { $_ }) -join " | "
       if (-not $errMsg) { $errMsg = "net use failed with exit code $($mapRes.ExitCode)" }
       $permSummary = "No Access"
     }
   }
-  catch {
-    $errMsg = $_.Exception.Message
-    $permSummary = "No Access"
-  }
   finally {
-    # Always attempt to remove mapping
     Invoke-CommandWithTimeout -CmdLine "net use $drivePath /delete /y" -TimeoutSec 5 | Out-Null
   }
 
@@ -255,47 +253,37 @@ function Test-ShareAccess {
     CanList           = $canList
     CanReadFile       = $canReadFile
     CanReadAcl        = $canReadAcl
+    CanWrite          = $canWrite
+    CanDelete         = $canDelete
     PermissionSummary = $permSummary
     AclHint           = $aclHint
     Error             = $errMsg
   }
 }
 
-# -----------------------------
-# Validate input files
-# -----------------------------
+# --- Validate input files ---
 if (-not (Test-Path -LiteralPath $AccountsFile)) { throw "Accounts file not found: $AccountsFile" }
 if (-not (Test-Path -LiteralPath $SharesFile))   { throw "Shares file not found:   $SharesFile" }
 
-$accounts = Get-Content -LiteralPath $AccountsFile |
-  ForEach-Object { $_.Trim() } |
-  Where-Object { $_ -and $_ -notmatch '^\s*#' } |
-  Select-Object -Unique
-
-$shares = Get-Content -LiteralPath $SharesFile |
-  ForEach-Object { $_.Trim() } |
-  Where-Object { $_ -and $_ -notmatch '^\s*#' } |
-  Select-Object -Unique
+$accounts = Get-Content -LiteralPath $AccountsFile | ForEach-Object { $_.Trim() } | Where-Object { $_ -and $_ -notmatch '^\s*#' } | Select-Object -Unique
+$shares   = Get-Content -LiteralPath $SharesFile   | ForEach-Object { $_.Trim() } | Where-Object { $_ -and $_ -notmatch '^\s*#' } | Select-Object -Unique
 
 if ($accounts.Count -lt 1) { throw "No accounts found in $AccountsFile" }
 if ($shares.Count -lt 1)   { throw "No shares found in $SharesFile" }
 
-# -----------------------------
-# Collect credentials
-# -----------------------------
+# --- Collect credentials ---
 Write-Status "Collecting credentials for $($accounts.Count) accounts..."
 $creds = foreach ($acct in $accounts) {
   Get-Credential -UserName $acct -Message "Enter password for $acct"
 }
 
-# -----------------------------
-# Run tests with progress + live status
-# -----------------------------
+# --- Run tests with progress ---
 $total = $creds.Count * $shares.Count
 $done  = 0
 $results = New-Object System.Collections.Generic.List[object]
 
 Write-Status "Starting tests: $($creds.Count) accounts x $($shares.Count) paths = $total checks. NetUseTimeout=${NetUseTimeoutSec}s"
+Write-Status ("ReadFileTest={0} (Recurse={1}) | WriteTest={2}" -f [bool]$EnableReadFileTest, [bool]$ReadFileRecurse, [bool]$EnableWriteTest)
 
 for ($ci = 0; $ci -lt $creds.Count; $ci++) {
   $cred = $creds[$ci]
@@ -304,16 +292,17 @@ for ($ci = 0; $ci -lt $creds.Count; $ci++) {
     $done++
 
     $pct = [math]::Round(($done / $total) * 100, 0)
-    $activity = "Testing share access ($done of $total)"
-    $status   = "Account: $($cred.UserName) | Path: $share"
-    $current  = "Map + Reach/List/ACL checks (timeout: ${NetUseTimeoutSec}s)"
+    Write-Progress -Activity "Testing share access ($done of $total)" `
+      -Status "Account: $($cred.UserName) | Path: $share" `
+      -CurrentOperation "Map + checks (timeout: ${NetUseTimeoutSec}s)" `
+      -PercentComplete $pct
 
-    Write-Progress -Activity $activity -Status $status -CurrentOperation $current -PercentComplete $pct
     Write-Status "[$done/$total] Testing $($cred.UserName) => $share"
 
     $results.Add(
       (Test-ShareAccess -UncPath $share -Credential $cred -TimeoutSec $NetUseTimeoutSec `
-        -DoReadFileTest ([bool]$EnableReadFileTest) -DoReadFileRecurse ([bool]$ReadFileRecurse))
+        -DoReadFileTest ([bool]$EnableReadFileTest) -DoReadFileRecurse ([bool]$ReadFileRecurse) `
+        -DoWriteTest ([bool]$EnableWriteTest) -WritePrefix $WriteTestFileNamePrefix)
     )
   }
 }
@@ -321,37 +310,11 @@ for ($ci = 0; $ci -lt $creds.Count; $ci++) {
 Write-Progress -Activity "Testing share access" -Completed
 Write-Status "Completed all tests."
 
-# -----------------------------
-# Output
-# -----------------------------
-$results |
-  Sort-Object User, SharePath |
-  Format-Table User, SharePath, CanMap, CanReach, CanList, CanReadAcl, PermissionSummary, Error -AutoSize
+# --- Output ---
+$results | Sort-Object User, SharePath |
+  Format-Table User, SharePath, CanMap, CanReach, CanList, CanReadFile, CanWrite, CanDelete, PermissionSummary, Error -AutoSize
 
 if ($ExportCsv) {
   $results | Export-Csv -NoTypeInformation -Path $CsvPath
   Write-Status "Exported results to: $CsvPath"
 }
-
-<# 
-USAGE:
-
-1) Put these in the same folder as this script:
-   - accounts.txt
-   - shares.txt
-
-2) Run:
-   .\Test-VAShareAccess.ps1
-
-3) Export CSV:
-   .\Test-VAShareAccess.ps1 -ExportCsv
-
-4) If you want to also confirm file read (non-destructive) when possible:
-   .\Test-VAShareAccess.ps1 -EnableReadFileTest
-
-   If you need to search deeper for a file (slower):
-   .\Test-VAShareAccess.ps1 -EnableReadFileTest -ReadFileRecurse
-
-5) Increase/decrease net use timeout:
-   .\Test-VAShareAccess.ps1 -NetUseTimeoutSec 10
-#>
