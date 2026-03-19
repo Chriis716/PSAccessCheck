@@ -1,39 +1,13 @@
-Get-CimInstance Win32_UserProfile |
-    Select-Object LocalPath, SID, Loaded, Special
+PS C:\WINDOWS\system32> Get-CimInstance Win32_UserProfile |
+    Where-Object { $_.LocalPath -like '*TEMP*' } |
+    Select LocalPath, Loaded, SID
 
-$Profile = Get-CimInstance Win32_UserProfile |
-    Where-Object { $_.LocalPath -eq 'C:\Users\username' -and -not $_.Loaded }
-
-$Profile | Remove-CimInstance
-
-
-++++++++++++++
-
-Get-CimInstance Win32_UserProfile |
-    Where-Object { -not $_.Special } |
-    Select-Object LocalPath, Loaded, SID, LastUseTime |
-    Sort-Object LocalPath
+LocalPath                                Loaded SID     
+---------                                ------ ---     
+C:\WINDOWS\system32\config\systemprofile   True S-1-5-18
 
 
-Get-ChildItem 'C:\Users' -Directory |
-    Where-Object { $_.Name -match 'temp|\.domain|^username$' } |
-    Select-Object FullName, LastWriteTime
 
-
-\Get-WinEvent -LogName Application -MaxEvents 200 |
-    Where-Object { $_.ProviderName -match 'User Profile Service' } |
-    Select-Object TimeCreated, Id, LevelDisplayName, Message
-
-
-++++++++++++++++++++++
-
-Get-CimInstance Win32_UserProfile |
-    Where-Object { $_.LocalPath -eq 'C:\Users\TEMP' } |
-    Select LocalPath, Loaded
-
-
-quser
-logoff <SessionID>
 ++++++++++++++++++++++++++++++++++
 $TempProfile = Get-CimInstance Win32_UserProfile |
     Where-Object { $_.LocalPath -eq 'C:\Users\TEMP' -and -not $_.Loaded }
