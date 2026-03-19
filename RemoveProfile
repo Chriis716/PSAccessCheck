@@ -37,3 +37,28 @@ if (Test-Path $Path) {
 }
 
 Test-Path 'C:\Users\TEMP'
+
+
+
++++++++++++++++++
+
+C:\WINDOWS\system32>rd /s /q C:\Users\TEMP
+C:\Users\TEMP\AppData\Local\CONNEC~1\L40DA~1.OIT\ActivitiesCache.db - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\AppData\Local\CONNEC~1\L40DA~1.OIT\ActivitiesCache.db-shm - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\AppData\Local\CONNEC~1\L40DA~1.OIT\ActivitiesCache.db-wal - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\AppData\Local\MICROS~1\Windows\NOTIFI~1\wpndatabase.db - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\AppData\Local\MICROS~1\Windows\NOTIFI~1\wpndatabase.db-shm - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\AppData\Local\MICROS~1\Windows\NOTIFI~1\wpndatabase.db-wal - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\AppData\Local\MICROS~1\Windows\NOTIFI~1\WPNPRMRY.tmp - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\AppData\Local\MICROS~1\Windows\UsrClass.dat - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\AppData\Local\MICROS~1\Windows\UsrClass.dat.LOG1 - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\AppData\Local\MICROS~1\Windows\UsrClass.dat.LOG2 - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\AppData\Local\MICROS~1\Windows\UsrClass.dat{c67672a9-2390-11f1-b655-005056a3c9d9}.TM.blf - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\AppData\Local\MICROS~1\Windows\UsrClass.dat{c67672a9-2390-11f1-b655-005056a3c9d9}.TMContainer00000000000000000001.regtrans-ms - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\AppData\Local\MICROS~1\Windows\UsrClass.dat{c67672a9-2390-11f1-b655-005056a3c9d9}.TMContainer00000000000000000002.regtrans-ms - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\NTUSER.DAT - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\ntuser.dat.LOG1 - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\ntuser.dat.LOG2 - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\NTUSER.DAT{eb21290d-93e8-11f0-b62c-005056a3c9d9}.TM.blf - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\NTUSER.DAT{eb21290d-93e8-11f0-b62c-005056a3c9d9}.TMContainer00000000000000000001.regtrans-ms - The process cannot access the file because it is being used by another process.
+C:\Users\TEMP\NTUSER.DAT{eb21290d-93e8-11f0-b62c-005056a3c9d9}.TMContainer00000000000000000002.regtrans-ms - The process cannot access the file because it is being used by another process.
