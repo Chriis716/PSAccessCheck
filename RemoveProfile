@@ -8,65 +8,32 @@ C:\WINDOWS\system32\config\systemprofile   True S-1-5-18
 
 
 
-++++++++++++++++++++++++++++++++++
-$TempProfile = Get-CimInstance Win32_UserProfile |
-    Where-Object { $_.LocalPath -eq 'C:\Users\TEMP' -and -not $_.Loaded }
+$Path = 'C:\Users\TEMP'
 
-if ($TempProfile) {
-    $TempProfile | Remove-CimInstance
+if (Test-Path $Path) {
+    takeown /F $Path /R /D Y | Out-Null
+    icacls $Path /grant Administrators:F /T /C | Out-Null
+    Remove-Item $Path -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-+++++++++++++++++++++
+Test-Path 'C:\Users\TEMP'
+
+
++++++++++
 
 $Path = 'C:\Users\TEMP'
 
-Takeown /F $Path /R /D Y
-icacls $Path /grant Administrators:F /T
+if (Test-Path $Path) {
+    Get-ChildItem $Path -Force -Recurse -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            try {
+                $_.Attributes = 'Normal'
+            } catch {}
+        }
 
-Get-ChildItem $Path -Force -Recurse -ErrorAction SilentlyContinue |
-    Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
-
-Remove-Item $Path -Force -Recurse -ErrorAction SilentlyContinue
-
-
-
-+++++++++++++++++++++++++++
-
-Get-CimInstance Win32_UserProfile |
-    Where-Object { $_.LocalPath -like '*TEMP*' } |
-    Select LocalPath, Loaded, SID
-
-
-
-Get-CimInstance Win32_UserProfile |
-    Where-Object { $_.LocalPath -eq 'C:\Users\TEMP' } |
-    Remove-CimInstance
-
-
-
-
-$Path = 'C:\Users\TEMP'
-
-Takeown /F $Path /R /D Y
-icacls $Path /grant Administrators:F /T
-
-Remove-Item $Path -Recurse -Force -ErrorAction SilentlyContinue
-
-
-
-++++++++
-
-Get-Process | Where-Object {
-    $_.Path -like "*TEMP*"
+    takeown /F $Path /R /D Y | Out-Null
+    icacls $Path /grant Administrators:F /T /C | Out-Null
+    Remove-Item $Path -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-
-
-
-
-
-
-
-
-
-
+Test-Path 'C:\Users\TEMP'
