@@ -39,16 +39,20 @@ Good morning Jennifer,
 
 Thank you for the information. I understand the concern and the impact this had on patient care.
 
-To clarify, the AE Title was not arbitrarily “turned off.” On 03/11/2026, an inbound connection associated with the new CT scanner was identified with an **unrecognized/unknown AE Title**. In accordance with standard imaging practices, the association was placed on hold to prevent unvalidated traffic from entering PACS until the correct configuration could be confirmed.
+To clarify, the AE Title was not arbitrarily “turned off.” On 03/11/2026, an inbound connection associated with the new CT scanner was identified with an unrecognized/unknown AE Title. In accordance with standard imaging practices, the association was placed on hold to prevent unvalidated traffic from entering PACS until the correct configuration could be confirmed.
 
-At that time, I had not received notification that the modality had been fully configured, tested, and was ready for clinical use, nor was the expected AE Title provided for validation. Because of this, the traffic could not be safely allowed through.
+At that time, I had not received notification that the modality had been fully configured, tested, and was ready for clinical use, nor was the expected AE Title provided for validation. All configurations on my end are based on the Modality Interface request and approved change details. In this case, the AE Title observed did not match what was documented in the change request, so the connection was held until the discrepancy could be resolved.
 
-Coordination for modality setup and vendor activity is managed through BIO-MED and the department. From the imaging/infrastructure side, I rely on Modality Interface request with all information for me to setup on my end. This is the information we go by. In this case, something other than what was entered was coming over. Our change order states a particular AET but something unknow came over. So a hold is put in place until it was fixed. 
+Coordination for modality setup and vendor activity is managed through BIO-MED and the department. From the imaging/infrastructure side, I rely on receiving accurate configuration details and notification when systems are ready for validation. That notification did not occur prior to the system attempting to send images.
 
-To prevent future occurrences, I recommend:
+To help prevent future occurrences, I recommend:
 
-* Notification to imaging/infrastructure prior to go-live or testing of new modalities
-* Confirmation of AE Title and routing details before clinical use
-* Coordinated communication when vendors are onsite making configuration changes
+Notification to imaging/infrastructure prior to go-live or testing of new modalities
+
+Confirmation of AE Title and routing details before clinical use
+
+Coordinated communication when vendors are onsite making configuration changes
 
 Please let me know once BIO-MED or GE confirms the finalized configuration so we can move forward.
+
+Thank you,
