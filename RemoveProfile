@@ -53,4 +53,36 @@ To help prevent future occurrences, I recommend:
 
 Please let me know once BIO-MED or GE confirms the finalized configuration so we can move forward.
 
-Moving forward with this, BioMed should be triple checking to make sure all thing on the medical device is setup per your request. You cannot deviate from what you are requesting. On our end that request that you submit is what we go by to create our change order. If that doesn’t match, it doesn’t get push through. Hence the hold. This should not have occurred if everything was followed through. We do not let anything come through without us knowing what it is.
+Good morning,
+
+I wanted to follow up on the AE Title discrepancy to help ensure we’re aligned moving forward.
+
+All configurations on our end are built strictly from the Modality Interface request and approved change details submitted by BIO-MED. That information is what we use to create and validate the configuration for routing into PACS.
+
+In this case, the AE Title observed did not match what was submitted in the request. Because of that mismatch, the connection was placed on hold, as we cannot allow traffic through that has not been validated against the approved configuration.
+
+To avoid this going forward, it’s important that the modality configuration on the device matches exactly what is submitted in the request, and that any changes are communicated prior to testing or go-live. If there is any deviation, we would need to revalidate before enabling traffic.
+
+This process ensures we maintain data integrity and proper routing within the imaging environment.
+
+Please let me know if you’d like to review the configuration together before the next validation.
+
+Thank you,
+[Your Name]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
