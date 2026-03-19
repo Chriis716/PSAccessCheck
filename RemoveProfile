@@ -18,3 +18,8 @@ Get-CimInstance Win32_UserProfile |
 Get-ChildItem 'C:\Users' -Directory |
     Where-Object { $_.Name -match 'temp|\.domain|^username$' } |
     Select-Object FullName, LastWriteTime
+
+
+\Get-WinEvent -LogName Application -MaxEvents 200 |
+    Where-Object { $_.ProviderName -match 'User Profile Service' } |
+    Select-Object TimeCreated, Id, LevelDisplayName, Message
