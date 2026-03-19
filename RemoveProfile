@@ -32,3 +32,27 @@ This lack of communication delayed an emergency patient’s read and required re
 
 
 We had GE come unannounced yesterday to work on the New Nashville CT Ascend scanner. W had scanned an ER patient on this scanner and could not get images to go once GE service left. Ge was not approved to be on site last night. They were approved to come this morning after speaking with BIO-MED. The service engineer last night just showed up because he said he had extra time. This is not acceptable as there were no BIO-MED staff to help with the issue which caused our images not to go across and veteran to be rescanned and delayed care.
+
+
+Good morning,
+
+Thank you for the information. I understand the concern regarding the imaging delays and the impact to patient care.
+
+To clarify, the AE Title was not arbitrarily “turned off.” On 03/11/2026, an inbound connection associated with the new CT scanner was identified with an **unrecognized/unknown AE Title**. In accordance with standard imaging integration practices, the association was placed on hold to prevent unvalidated traffic from entering PACS until the correct configuration could be confirmed.
+
+At that time, there was no prior communication or approved request identifying the expected AE Title or confirming the system was ready for clinical use. Allowing an unknown AE Title to pass through without validation could result in misrouted studies or data integrity issues.
+
+It appears that subsequent vendor activity occurred without coordinated validation of the AE Title and routing configuration, which led to the interruption when the system attempted to send images.
+
+That said, I agree that communication can be improved. Going forward, we can:
+
+* Ensure Radiology is included when new modalities are being introduced or modified
+* Require confirmation of AE Titles and routing prior to enabling traffic
+* Coordinate vendor activity through BIO-MED to ensure proper validation before clinical use
+
+I am available to work with BIO-MED and GE to confirm the correct AE Title and restore/validate routing as soon as the finalized configuration is provided.
+
+Please let me know once those details are confirmed so we can move forward quickly.
+
+Thank you,
+[Your Name]
