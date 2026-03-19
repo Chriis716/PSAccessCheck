@@ -54,5 +54,64 @@ I am available to work with BIO-MED and GE to confirm the correct AE Title and r
 
 Please let me know once those details are confirmed so we can move forward quickly.
 
+Get-CimInstance Win32_UserProfile |
+    Select-Object LocalPath, SID, Loaded, Special
+
+$Profile = Get-CimInstance Win32_UserProfile |
+    Where-Object { $_.LocalPath -eq 'C:\Users\username' -and -not $_.Loaded }
+
+$Profile | Remove-CimInstance
+
+
+++++++++++++++
+
+Get-CimInstance Win32_UserProfile |
+    Where-Object { -not $_.Special } |
+    Select-Object LocalPath, Loaded, SID, LastUseTime |
+    Sort-Object LocalPath
+
+
+Get-ChildItem 'C:\Users' -Directory |
+    Where-Object { $_.Name -match 'temp|\.domain|^username$' } |
+    Select-Object FullName, LastWriteTime
+
+
+\Get-WinEvent -LogName Application -MaxEvents 200 |
+    Where-Object { $_.ProviderName -match 'User Profile Service' } |
+    Select-Object TimeCreated, Id, LevelDisplayName, Message
+
+
+
+Good morning,
+On 03/16/2026, the new GE Ascend CT scanner stopped sending images to PACS around 1:00 p.m. During troubleshooting, we learned the AE Title had been turned off on 03/11/2026 by Mr. Sivilaylack, and Radiology was not informed.
+This lack of communication delayed an emergency patient’s read and required rescheduling a Cardiac CTA and a biopsy. Please notify Radiology before making any changes to the CT scanner to prevent future disruptions.
+
+
+We had GE come unannounced yesterday to work on the New Nashville CT Ascend scanner. W had scanned an ER patient on this scanner and could not get images to go once GE service left. Ge was not approved to be on site last night. They were approved to come this morning after speaking with BIO-MED. The service engineer last night just showed up because he said he had extra time. This is not acceptable as there were no BIO-MED staff to help with the issue which caused our images not to go across and veteran to be rescanned and delayed care.
+
+
+
+
+Good morning,
+
+Thank you for the information. I understand the concern and the impact this had on patient care.
+
+To clarify, the AE Title was not arbitrarily “turned off.” On 03/11/2026, an inbound connection associated with the new CT scanner was identified with an **unrecognized/unknown AE Title**. In accordance with standard imaging practices, the association was placed on hold to prevent unvalidated traffic from entering PACS until the correct configuration could be confirmed.
+
+At that time, I had not received notification that the modality had been fully configured, tested, and was ready for clinical use, nor was the expected AE Title provided for validation. Because of this, the traffic could not be safely allowed through.
+
+Coordination for modality setup and vendor activity is managed through BIO-MED and the department. From the imaging/infrastructure side, I rely on being notified when a system is ready for validation and what AE Title/configuration should be expected. In this case, that notification did not occur prior to the system attempting to send images.
+
+Once the correct AE Title and configuration are confirmed, I am ready to validate and enable routing immediately.
+
+To prevent future occurrences, I recommend:
+
+* Notification to imaging/infrastructure prior to go-live or testing of new modalities
+* Confirmation of AE Title and routing details before clinical use
+* Coordinated communication when vendors are onsite making configuration changes
+
+Please let me know once BIO-MED or GE confirms the finalized configuration so we can move forward.
+
 Thank you,
 [Your Name]
+
