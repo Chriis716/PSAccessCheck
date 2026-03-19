@@ -23,3 +23,9 @@ Get-ChildItem 'C:\Users' -Directory |
 \Get-WinEvent -LogName Application -MaxEvents 200 |
     Where-Object { $_.ProviderName -match 'User Profile Service' } |
     Select-Object TimeCreated, Id, LevelDisplayName, Message
+
+
+
+Good morning,
+
+We had GE come unannounced yesterday to work on the New Nashville CT Ascend scanner. W had scanned an ER patient on this scanner and could not get images to go once GE service left. Ge was not approved to be on site last night. They were approved to come this morning after speaking with BIO-MED. The service engineer last night just showed up because he said he had extra time. This is not acceptable as there were no BIO-MED staff to help with the issue which caused our images not to go across and veteran to be rescanned and delayed care.
