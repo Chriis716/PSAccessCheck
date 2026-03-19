@@ -25,4 +25,31 @@ Get-ChildItem 'C:\Users' -Directory |
     Select-Object TimeCreated, Id, LevelDisplayName, Message
 
 
+++++++++++++++++++++++
 
+Get-CimInstance Win32_UserProfile |
+    Where-Object { $_.LocalPath -eq 'C:\Users\TEMP' } |
+    Select LocalPath, Loaded
+
+
+quser
+logoff <SessionID>
+++++++++++++++++++++++++++++++++++
+$TempProfile = Get-CimInstance Win32_UserProfile |
+    Where-Object { $_.LocalPath -eq 'C:\Users\TEMP' -and -not $_.Loaded }
+
+if ($TempProfile) {
+    $TempProfile | Remove-CimInstance
+}
+
++++++++++++++++++++++
+
+$Path = 'C:\Users\TEMP'
+
+Takeown /F $Path /R /D Y
+icacls $Path /grant Administrators:F /T
+
+Get-ChildItem $Path -Force -Recurse -ErrorAction SilentlyContinue |
+    Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
+
+Remove-Item $Path -Force -Recurse -ErrorAction SilentlyContinue
