@@ -53,3 +53,46 @@ Get-ChildItem $Path -Force -Recurse -ErrorAction SilentlyContinue |
     Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
 
 Remove-Item $Path -Force -Recurse -ErrorAction SilentlyContinue
+
+
+
++++++++++++++++++++++++++++
+
+Get-CimInstance Win32_UserProfile |
+    Where-Object { $_.LocalPath -like '*TEMP*' } |
+    Select LocalPath, Loaded, SID
+
+
+
+Get-CimInstance Win32_UserProfile |
+    Where-Object { $_.LocalPath -eq 'C:\Users\TEMP' } |
+    Remove-CimInstance
+
+
+
+
+$Path = 'C:\Users\TEMP'
+
+Takeown /F $Path /R /D Y
+icacls $Path /grant Administrators:F /T
+
+Remove-Item $Path -Recurse -Force -ErrorAction SilentlyContinue
+
+
+
+++++++++
+
+Get-Process | Where-Object {
+    $_.Path -like "*TEMP*"
+}
+
+
+
+
+
+
+
+
+
+
+
